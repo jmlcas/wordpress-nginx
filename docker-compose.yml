@@ -1,0 +1,63 @@
+version: '3.7'
+
+services:
+
+  db:
+    container_name: mysql
+    image: mariadb:latest
+    volumes:
+      - ./db_data:/var/lib/mysql     
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+  wordpress:
+    container_name: wordpress
+    image: wordpress:6.4.2-php8.3-fpm-alpine    
+    depends_on:
+      - db
+    volumes:
+      - ./wordpress:/var/www/html
+      - ./config/php.ini:/usr/local/etc/php/conf.d/php.ini   
+    ports:
+      - "8010:80"
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE}   
+       
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: wppma 
+    restart: unless-stopped   
+    depends_on:      
+      - db
+    ports:      
+      - "8080:80"        
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: ${MYSQL_USER}
+      PMA_PASSWORD: ${MYSQL_PASSWORD} 
+
+  nginx:
+    container_name: nginx
+    image: nginx:1.25.3-alpine
+    ports:
+      - "8100:80"
+    depends_on:
+      - wordpress 
+    restart: unless-stopped       
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/log:/var/log/nginx
+      - ./wordpress:/var/www/html     
+          
+
